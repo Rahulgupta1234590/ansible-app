@@ -1,0 +1,58 @@
+- name: Deploy Flask App from GitHub
+  hosts: web
+  become: true
+
+  vars:
+    app_repo: "https://github.com/paulphilip/python-flask-app.git"
+    app_dir: "/home/ubuntu/flaskapp"
+
+  tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install system packages
+      apt:
+        name:
+          - git
+          - python3-pip
+          - python3-venv
+          - nginx
+        state: present
+
+    - name: Clone Flask app from GitHub
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: HEAD
+
+    - name: Create Python virtual environment
+      command: python3 -m venv {{ app_dir }}/venv
+      args:
+        creates: "{{ app_dir }}/venv"
+
+    - name: Install dependencies from requirements.txt
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+
+    - name: Start Flask app in background
+      shell: nohup {{ app_dir }}/venv/bin/python {{ app_dir }}/app.py &
+
+    - name: Configure NGINX to reverse proxy to Flask
+      copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80;
+              location / {
+                  proxy_pass http://127.0.0.1:5000;
+              }
+          }
+      notify: Restart nginx
+
+  handlers:
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted
