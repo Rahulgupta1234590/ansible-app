@@ -1,0 +1,13 @@
+[Unit]
+Description=Flask App
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ansible-app
+Environment="PATH=/home/ubuntu/ansible-app/venv/bin"
+ExecStart=/home/ubuntu/ansible-app/venv/bin/python app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
